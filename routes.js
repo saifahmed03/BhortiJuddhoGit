@@ -1,5 +1,9 @@
-// src/routes.js
 import React from "react";
+import { Navigate } from "react-router-dom";
+
+// Admin Pages
+import AdminLogin from "./pages/Admin/AdminLogin";
+import AdminPanel from "./pages/Admin/AdminPanel";
 
 // Public Pages
 import Home from "./pages/Home/Home";
@@ -14,9 +18,7 @@ import AcademicInfo from "./pages/Student/AcademicInfo";
 import Essays from "./pages/Student/Essays";
 import Documents from "./pages/Student/Documents";
 import Applications from "./pages/Student/Applications";
-
-// Admin Pages
-import AdminPanel from "./pages/Admin/AdminPanel";
+import UniversityBrowse from "./pages/Student/UniversityBrowse";
 
 // Error Pages
 import NotFound from "./pages/Error/NotFound";
@@ -35,17 +37,23 @@ const routes = [
   { path: "/auth/login", element: <Login /> },
   { path: "/auth/signup", element: <Signup /> },
   { path: "/auth/google-redirect", element: <GoogleRedirect /> },
+  { path: "/auth/callback", element: <GoogleRedirect /> },
 
   // Student Protected Routes
   { path: "/student/dashboard", element: withAuth(<Dashboard />) },
   { path: "/student/profile", element: withAuth(<Profile />) },
   { path: "/student/academic-info", element: withAuth(<AcademicInfo />) },
   { path: "/student/essays", element: withAuth(<Essays />) },
+  { path: "/student/essays/:applicationId", element: withAuth(<Essays />) },
   { path: "/student/documents", element: withAuth(<Documents />) },
   { path: "/student/applications", element: withAuth(<Applications />) },
+  { path: "/student/universities", element: withAuth(<UniversityBrowse />) },
 
   // Admin Protected
-  { path: "/admin", element: withAdmin(<AdminPanel />) },
+  // Admin
+  { path: "/admin", element: <Navigate to="/admin/login" replace /> },
+  { path: "/admin/login", element: <AdminLogin /> },
+  { path: "/admin/dashboard", element: <AdminPanel /> },
 
   // Catch All
   { path: "*", element: <NotFound /> },
