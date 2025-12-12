@@ -16,3 +16,11 @@ export const getProgramsByUniversity = async (universityId) => {
   if (error) throw error;
   return data;
 };
+
+export const getAllPrograms = async () => {
+  const { data, error } = await supabase
+    .from("programs")
+    .select("*");
+  if (error) throw error;
+  return data;
+};
