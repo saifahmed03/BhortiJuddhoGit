@@ -1,4 +1,3 @@
-
 /* =========================
    Base Dark Theme
 ========================= */
@@ -6,8 +5,17 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Inter', sans-serif;
-  background-color: #16161C; /* Dark Carbon */
+  background-color: #0E0E14; /* Deep Dark Base */
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(79, 156, 255, 0.25) 0%, transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(255, 79, 212, 0.25) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(100, 50, 200, 0.1) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(0, 230, 118, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 20% 90%, rgba(255, 215, 0, 0.1) 0%, transparent 40%);
+  background-attachment: fixed;
+  background-size: 100% 100%;
   color: #E0E0E0;
+  min-height: 100vh;
 }
 
 /* =========================
