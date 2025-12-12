@@ -5,7 +5,7 @@ export const uploadDocument = async (userId, file) => {
   const fileName = `${userId}/${Date.now()}-${file.name}`;
 
   const { error: uploadError } = await supabase.storage
-    .from('student-documents')
+    .from('documents')
     .upload(fileName, file);
 
   if (uploadError) return { error: uploadError };
@@ -13,11 +13,11 @@ export const uploadDocument = async (userId, file) => {
   // save reference in DB
   return supabase.from('documents').insert({
     student_id: userId,
-    file_url: fileName,
-    type: file.type,
+    file_name: fileName,
+    file_type: file.type,
   });
 };
 
 export const downloadDocument = (fileName) => {
-  return supabase.storage.from('student-documents').getPublicUrl(fileName);
+  return supabase.storage.from('documents').getPublicUrl(fileName);
 };
