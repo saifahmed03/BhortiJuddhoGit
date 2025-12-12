@@ -1,59 +1,134 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../../supabaseClient";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import {
+  getApplications,
+  createApplication,
+  updateApplication,
+  deleteApplication
+} from "../../services/studentService";
+import {
+  getUniversities,
+  getProgramsByUniversity,
+  getAllPrograms
+} from "../../services/universityService";
 import Loading from "../../components/Loading";
+import {
+  Container,
+  Paper,
+  Typography,
+  Button,
+  Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  FormHelperText
+} from '@mui/material';
+import {
+  Add,
+  Edit,
+  Delete,
+  School,
+  Description,
+  Close,
+  ArrowBack
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
 
 export default function Applications() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
+  const [universities, setUniversities] = useState([]);
+  const [programsLookup, setProgramsLookup] = useState({}); // Lookup map for programs
+  const [programs, setPrograms] = useState([]); // For dropdown in form
+
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState(null);
 
   const [form, setForm] = useState({
-    university: "",
-    program: "",
-    intake: "",
+    university_id: "",
+    program_id: "",
     status: "Draft",
   });
 
   useEffect(() => {
-    loadApplications();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
-  const loadApplications = async () => {
+  const loadData = async () => {
     setLoading(true);
+    try {
+      const { data: apps, error } = await getApplications(user.id);
+      if (error) throw error;
+      setApplications(apps || []);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      // Load universities
+      const unis = await getUniversities();
+      setUniversities(unis || []);
 
-    if (!user) return;
+      // Load ALL programs to resolve names
+      const allProgs = await getAllPrograms();
+      // Create lookup map: id -> name
+      const lookup = {};
+      if (allProgs) {
+        allProgs.forEach(p => {
+          lookup[p.id] = p.name;
+        });
+      }
+      setProgramsLookup(lookup);
 
-    const { data } = await supabase
-      .from("applications")
-      .select("*")
-      .eq("auth_id", user.id)
-      .order("created_at", { ascending: false });
-
-    setApplications(data || []);
-    setLoading(false);
+    } catch (err) {
+      console.error("Error loading data:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Open create/edit form
-  const openForm = (app = null) => {
+  // When university changes in form, load programs
+  const handleUniversityChange = async (uniId) => {
+    setForm(prev => ({ ...prev, university_id: uniId, program_id: "" }));
+    if (uniId) {
+      const progs = await getProgramsByUniversity(uniId);
+      setPrograms(progs || []);
+    } else {
+      setPrograms([]);
+    }
+  };
+
+  const openForm = async (app = null) => {
     if (app) {
       setEditId(app.id);
+      // Pre-load programs if we are editing
+      if (app.university_id) {
+        const progs = await getProgramsByUniversity(app.university_id);
+        setPrograms(progs || []);
+      }
       setForm({
-        university: app.university,
-        program: app.program,
-        intake: app.intake,
+        university_id: app.university_id,
+        program_id: app.program_id,
         status: app.status,
       });
     } else {
       setEditId(null);
+      setPrograms([]);
       setForm({
-        university: "",
-        program: "",
-        intake: "",
+        university_id: "",
+        program_id: "",
         status: "Draft",
       });
     }
@@ -62,173 +137,282 @@ export default function Applications() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    try {
+      const payload = {
+        student_id: user.id,
+        university_id: form.university_id,
+        program_id: form.program_id,
+        status: form.status,
+      };
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      if (editId) {
+        await updateApplication(editId, payload);
+      } else {
+        await createApplication(payload);
+      }
 
-    const payload = {
-      auth_id: user.id,
-      ...form,
-    };
-
-    if (editId) {
-      await supabase.from("applications").update(payload).eq("id", editId);
-    } else {
-      await supabase.from("applications").insert(payload);
+      setFormOpen(false);
+      loadData(); // Reload list
+    } catch (err) {
+      console.error("Error saving application:", err);
+      alert("Failed to save application");
     }
-
-    setFormOpen(false);
-    loadApplications();
   };
 
-  const deleteApplication = async (id) => {
-    await supabase.from("applications").delete().eq("id", id);
-    loadApplications();
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure?")) return;
+    await deleteApplication(id);
+    loadData();
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      Draft: 'default',
+      Submitted: 'info',
+      'In Review': 'warning',
+      Accepted: 'success',
+      Rejected: 'error'
+    };
+    return colors[status] || 'default';
+  };
+
+  const getUniversityName = (uniId) => {
+    const uni = universities.find(u => u.id === uniId);
+    return uni ? uni.name : "Unknown University";
+  };
+
+  const getProgramName = (progId) => {
+    return programsLookup[progId] || "Unknown Program";
   };
 
   if (loading) return <Loading />;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-semibold mb-6">Applications</h1>
+    <Box sx={{ bgcolor: '#0E0E14', minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="lg">
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/student/dashboard')}
+          sx={{ mb: 2, color: 'text.secondary', '&:hover': { color: '#4F9CFF' } }}
+        >
+          Go Back to Dashboard
+        </Button>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <Typography
+              variant="h3"
+              fontWeight="bold"
+              sx={{
+                background: 'linear-gradient(45deg, #FF4FD2, #4F9CFF)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              My Applications
+            </Typography>
+          </motion.div>
 
-      {/* Create Button */}
-      <button
-        onClick={() => openForm()}
-        className="mb-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-      >
-        + New Application
-      </button>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => openForm()}
+            sx={{
+              background: 'linear-gradient(45deg, #00E676, #00C853)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #00C853, #00A843)'
+              }
+            }}
+          >
+            New Application
+          </Button>
+        </Box>
 
-      {/* Form */}
-      {formOpen && (
-        <div className="bg-white shadow p-6 rounded mb-8">
-          <h2 className="text-xl font-semibold mb-4">
-            {editId ? "Edit Application" : "New Application"}
-          </h2>
+        {applications.length === 0 ? (
+          <Paper
+            sx={{
+              p: 6,
+              textAlign: 'center',
+              background: 'rgba(30, 30, 37, 0.95)',
+              borderRadius: 3
+            }}
+          >
+            <School sx={{ fontSize: 64, color: '#4F9CFF', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary">
+              No applications yet. Start your journey today!
+            </Typography>
+          </Paper>
+        ) : (
+          <Grid container spacing={3}>
+            {applications.map((app, index) => (
+              <Grid item xs={12} md={6} lg={4} key={app.id}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card
+                    sx={{
+                      background: 'rgba(30, 30, 37, 0.95)',
+                      borderRadius: 3,
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        transition: 'transform 0.3s ease'
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
+                        <School sx={{ color: '#4F9CFF', fontSize: 32 }} />
+                        <Chip
+                          label={app.status}
+                          color={getStatusColor(app.status)}
+                          size="small"
+                        />
+                      </Box>
+                      <Typography variant="h6" fontWeight="bold" color="white" gutterBottom>
+                        {getUniversityName(app.university_id)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {getProgramName(app.program_id)}
+                      </Typography>
+                    </CardContent>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-
-            <div>
-              <label className="font-medium">University</label>
-              <input
-                type="text"
-                value={form.university}
-                onChange={(e) =>
-                  setForm({ ...form, university: e.target.value })
-                }
-                className="w-full mt-2 p-2 border rounded"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="font-medium">Program</label>
-              <input
-                type="text"
-                value={form.program}
-                onChange={(e) =>
-                  setForm({ ...form, program: e.target.value })
-                }
-                className="w-full mt-2 p-2 border rounded"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="font-medium">Intake</label>
-              <input
-                type="text"
-                placeholder="Fall 2025, Spring 2026..."
-                value={form.intake}
-                onChange={(e) =>
-                  setForm({ ...form, intake: e.target.value })
-                }
-                className="w-full mt-2 p-2 border rounded"
-              />
-            </div>
-
-            <div>
-              <label className="font-medium">Status</label>
-              <select
-                value={form.status}
-                onChange={(e) =>
-                  setForm({ ...form, status: e.target.value })
-                }
-                className="w-full mt-2 p-2 border rounded"
-              >
-                <option>Draft</option>
-                <option>Submitted</option>
-                <option>In Review</option>
-                <option>Accepted</option>
-                <option>Rejected</option>
-              </select>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                {editId ? "Save Changes" : "Create"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormOpen(false)}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Applications List */}
-      <div className="space-y-4">
-        {applications.length === 0 && (
-          <p className="text-gray-600">No applications found.</p>
+                    <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                      <Button
+                        size="small"
+                        startIcon={<Description />}
+                        href={`/student/essays/${app.id}`}
+                        sx={{ color: '#00E676' }}
+                      >
+                        Essays
+                      </Button>
+                      <Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => openForm(app)}
+                          sx={{ color: '#4F9CFF' }}
+                        >
+                          <Edit />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(app.id)}
+                          sx={{ color: '#FF4FD2' }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Box>
+                    </CardActions>
+                  </Card>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
         )}
 
-        {applications.map((app) => (
-          <div
-            key={app.id}
-            className="bg-white shadow p-4 rounded flex justify-between items-center"
-          >
-            <div>
-              <p className="font-medium">{app.university}</p>
-              <p className="text-gray-600">{app.program}</p>
-              <p className="text-sm text-gray-500">{app.status}</p>
-              <p className="text-sm text-gray-400">{app.intake}</p>
-            </div>
+        <Dialog
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              background: 'rgba(30, 30, 37, 0.98)',
+              borderRadius: 3
+            }
+          }}
+        >
+          <DialogTitle>
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6" fontWeight="bold">
+                {editId ? 'Edit Application' : 'New Application'}
+              </Typography>
+              <IconButton onClick={() => setFormOpen(false)}>
+                <Close />
+              </IconButton>
+            </Box>
+          </DialogTitle>
 
-            <div className="flex gap-4">
-              <button
-                onClick={() => openForm(app)}
-                className="text-blue-600 hover:underline"
-              >
-                Edit
-              </button>
+          <form onSubmit={handleSubmit}>
+            <DialogContent>
+              {/* University Dropdown */}
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel>University</InputLabel>
+                <Select
+                  value={form.university_id}
+                  label="University"
+                  onChange={(e) => handleUniversityChange(e.target.value)}
+                >
+                  {universities.map((uni) => (
+                    <MenuItem key={uni.id} value={uni.id}>
+                      {uni.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {universities.length === 0 && (
+                  <FormHelperText>No universities found. Please contact admin.</FormHelperText>
+                )}
+              </FormControl>
 
-              <a
-                href={`/essays/${app.id}`}
-                className="text-green-700 hover:underline"
-              >
-                Essays
-              </a>
+              {/* Program Dropdown */}
+              <FormControl fullWidth margin="normal" required disabled={!form.university_id}>
+                <InputLabel>Program</InputLabel>
+                <Select
+                  value={form.program_id}
+                  label="Program"
+                  onChange={(e) => setForm({ ...form, program_id: e.target.value })}
+                >
+                  {programs.map((prog) => (
+                    <MenuItem key={prog.id} value={prog.id}>
+                      {prog.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-              <button
-                onClick={() => deleteApplication(app.id)}
-                className="text-red-600 hover:underline"
+
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={form.status}
+                  label="Status"
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                >
+                  <MenuItem value="Draft">Draft</MenuItem>
+                  <MenuItem value="Submitted">Submitted</MenuItem>
+                  <MenuItem value="In Review">In Review</MenuItem>
+                  <MenuItem value="Accepted">Accepted</MenuItem>
+                  <MenuItem value="Rejected">Rejected</MenuItem>
+                </Select>
+              </FormControl>
+            </DialogContent>
+
+            <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Button onClick={() => setFormOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                sx={{
+                  background: 'linear-gradient(45deg, #FF4FD2, #4F9CFF)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #E63FB8, #3D84E5)'
+                  }
+                }}
               >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+                {editId ? 'Save Changes' : 'Create'}
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+      </Container>
+    </Box>
   );
 }
