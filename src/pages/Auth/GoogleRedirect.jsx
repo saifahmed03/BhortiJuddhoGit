@@ -1,30 +1,49 @@
-
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../../supabaseClient";
-import Loading from "../../components/Loading";
+// src/pages/Auth/GoogleRedirect.jsx
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 const GoogleRedirect = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleRedirect = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error(error);
-        navigate("/auth/login");
-        return;
-      }
-      if (session?.user) {
-        navigate("/student/dashboard");
-      } else {
-        navigate("/auth/login");
-      }
-    };
-    handleRedirect();
+    // Supabase automatically handles the OAuth callback
+    // Just redirect to dashboard after a brief moment
+    const timer = setTimeout(() => {
+      navigate('/student/dashboard');
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, [navigate]);
 
-  return <Loading />;
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1A1A24 0%, #0E0E14 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 3
+      }}
+    >
+      <CircularProgress size={60} sx={{ color: '#4F9CFF' }} />
+      <Typography
+        variant="h5"
+        sx={{
+          background: 'linear-gradient(45deg, #FF4FD2, #4F9CFF)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
+        Signing you in...
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Please wait while we complete your authentication
+      </Typography>
+    </Box>
+  );
 };
 
 export default GoogleRedirect;
