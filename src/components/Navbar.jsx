@@ -1,47 +1,192 @@
 // src/components/Navbar.jsx
 import React from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  Container,
+  useScrollTrigger,
+  Slide
+} from '@mui/material';
+import {
+  Home,
+  Dashboard,
+  AdminPanelSettings,
+  Login,
+  PersonAdd
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+
+function HideOnScroll({ children }) {
+  const trigger = useScrollTrigger();
+
+  return (
+    <Slide appear={false} direction="down" in={!trigger}>
+      {children}
+    </Slide>
+  );
+}
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   return (
-    <nav className="w-full fixed top-0 z-50 bg-[#0E0E14]/95 backdrop-blur-md border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <div className="grid grid-cols-3 items-center h-16 w-full">
-
-          {/* LEFT: Logo */}
-          <div className="col-span-1 flex items-center">
-            <img src="/logo.png" alt="Logo" className="h-10 mr-3" />
-            <span className="text-white text-lg font-semibold">Bhortijuddho</span>
-          </div>
-
-          {/* CENTER: Nav links - exact center column */}
-          <div className="col-span-1 justify-self-center hidden md:flex items-center gap-6">
-            <a href="/" className="text-gray-300 hover:text-white transition font-medium no-underline">Home</a>
-            <a href="/student/dashboard" className="text-gray-300 hover:text-white transition font-medium no-underline">Dashboard</a>
-            <a href="/admin" className="text-gray-300 hover:text-white transition font-medium no-underline">Admin</a>
-          </div>
-
-          {/* RIGHT: Auth buttons */}
-          <div className="col-span-1 flex items-center justify-end gap-4">
-            <a
-              href="/auth/login"
-              className="px-4 py-2 border border-gray-600 text-gray-200 rounded-lg hover:bg-white/5 transition no-underline"
+    <HideOnScroll>
+      <AppBar
+        position="fixed"
+        sx={{
+          background: 'rgba(14, 14, 20, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)'
+        }}
+      >
+        <Container maxWidth="xl">
+          <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
+            {/* Logo Section - Enhanced & Branded */}
+            <Box
+              display="flex"
+              alignItems="center"
+              sx={{
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                },
+                '&:hover .logo-text': {
+                  textShadow: '0 0 25px rgba(79, 156, 255, 0.8), 0 0 50px rgba(255, 79, 210, 0.5)',
+                },
+                '&:hover .logo-underline': {
+                  width: '100%',
+                }
+              }}
+              onClick={() => navigate('/')}
             >
-              Sign In
-            </a>
+              {/* Logo Text with Underline */}
+              <Box sx={{ position: 'relative' }}>
+                <Typography
+                  className="logo-text"
+                  variant="h4"
+                  sx={{
+                    fontFamily: '"Nova Round", cursive',
+                    fontWeight: 400,
+                    letterSpacing: '0.5px',
+                    background: 'linear-gradient(45deg, #FF4FD2 0%, #4F9CFF 40%, #C5FF66 80%, #FF4FD2 100%)',
+                    backgroundSize: '200% auto',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    textShadow: '0 0 15px rgba(79, 156, 255, 0.4)',
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                    pb: 0.5,
+                    fontSize: { xs: '1.5rem', md: '2rem' },
+                  }}
+                >
+                  bhortijuddho
+                </Typography>
 
-            <a
-              href="/auth/signup"
-              className="px-4 py-2 bg-gradient-to-r from-[#FF4FD2] via-[#4F9CFF] to-[#C5FF66] text-black font-semibold rounded-lg shadow-lg hover:opacity-90 transition no-underline"
-            >
-              Sign Up
-            </a>
-          </div>
+                {/* Animated Underline */}
+                <Box
+                  className="logo-underline"
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    height: '3px',
+                    width: 0,
+                    background: 'linear-gradient(90deg, #FF4FD2, #4F9CFF, #C5FF66)',
+                    transition: 'width 0.4s ease',
+                    borderRadius: '2px',
+                    boxShadow: '0 0 15px rgba(79, 156, 255, 0.8)',
+                  }}
+                />
+              </Box>
+            </Box>
 
-        </div>
+            {/* Center Navigation */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }}>
+              <Button
+                startIcon={<Home />}
+                onClick={() => navigate('/')}
+                sx={{
+                  color: 'white',
+                  '&:hover': {
+                    background: 'rgba(79, 156, 255, 0.1)',
+                    color: '#4F9CFF'
+                  }
+                }}
+              >
+                Home
+              </Button>
+              <Button
+                startIcon={<Dashboard />}
+                onClick={() => navigate('/auth/login', { state: { from: '/student/dashboard' } })}
+                sx={{
+                  color: 'white',
+                  '&:hover': {
+                    background: 'rgba(79, 156, 255, 0.1)',
+                    color: '#4F9CFF'
+                  }
+                }}
+              >
+                Dashboard
+              </Button>
+              <Button
+                startIcon={<AdminPanelSettings />}
+                onClick={() => navigate('/admin')}
+                sx={{
+                  color: 'white',
+                  '&:hover': {
+                    background: 'rgba(79, 156, 255, 0.1)',
+                    color: '#4F9CFF'
+                  }
+                }}
+              >
+                Admin
+              </Button>
+            </Box>
 
-      </div>
-    </nav>
+            {/* Auth Buttons */}
+            <Box display="flex" gap={2} alignItems="center">
+              <Button
+                startIcon={<Login />}
+                variant="outlined"
+                onClick={() => navigate('/auth/login')}
+                sx={{
+                  borderColor: '#4F9CFF',
+                  color: '#4F9CFF',
+                  '&:hover': {
+                    borderColor: '#3D84E5',
+                    background: 'rgba(79, 156, 255, 0.1)'
+                  }
+                }}
+              >
+                Sign In
+              </Button>
+              <Button
+                startIcon={<PersonAdd />}
+                variant="contained"
+                onClick={() => navigate('/auth/signup')}
+                sx={{
+                  background: 'linear-gradient(45deg, #FF4FD2, #4F9CFF)',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #E63FB8, #3D84E5)',
+                    boxShadow: '0 4px 20px rgba(79, 156, 255, 0.4)'
+                  }
+                }}
+              >
+                Sign Up
+              </Button>
+            </Box>
+          </Toolbar>
+        </Container>
+      </AppBar>
+    </HideOnScroll>
   );
 };
 
